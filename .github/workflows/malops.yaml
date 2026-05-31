@@ -64,11 +64,12 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1 # Change to your chosen AWS region
+          aws-region: us-west-1 # Change to your chosen AWS region
 
       - name: Pull Data from S3 via DVC
         run: |
-          dvc repro --pull
+          dvc pull
+          dvc repro 
       - name: Setup CML
         if: github.event_name == 'pull_request'
         uses: iterative/setup-cml@v2
