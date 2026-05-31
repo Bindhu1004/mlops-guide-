@@ -33,7 +33,7 @@ jobs:
 
       - name: Run Pipeline and Generate Metrics
         run: |
-          dvc repro
+          dvc repro --pull
 
           # Start creating the markdown report
           echo "## Model Performance Report" > report.md
