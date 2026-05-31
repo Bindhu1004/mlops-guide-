@@ -39,7 +39,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: us-west-1 # Ensure this matches your S3 bucket region
-          audience: https://github.com
+          audience: sts.amazonaws.com
 
       - name: Install Python Dependencies and DVC
         run: |
