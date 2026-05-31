@@ -58,23 +58,37 @@ jobs:
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "## 🚀 Experiment Performance Metrics" > report.md
+          # 1. Fetch main branch metadata so DVC can calculate differences
+          git fetch origin main:main
+
+          # 2. Start the markdown report header with the current commit hash
+          echo "## Experiment Report ($(git rev-parse --short HEAD))" > report.md
+          echo "" >> report.md
+
+          # 3. Generate Hyperparameter Comparison Table
+          echo "### Params workflow vs. main" >> report.md
+          dvc params diff main --targets params.yaml --md >> report.md
+          echo "" >> report.md
+
+          # 4. Generate Performance Metrics Comparison Table
+          echo "### Metrics workflow vs. main" >> report.md
+          dvc metrics diff main --targets evaluation/metrics.json --md >> report.md
+          echo "" >> report.md
+
+          # 5. Append Visual Plots
+          echo "### Plots" >> report.md
+          echo "#### Training History" >> report.md
           
-          echo "### Core Model Metrics" >> report.md
-          echo "\`\`\`json" >> report.md
-          cat evaluation/metrics.json >> report.md
-          echo "\`\`\`" >> report.md
-          
-          echo "### 📊 Visual Evaluation" >> report.md
+          # Append your training history curves
           if [ -f evaluation/plots/training_history.png ]; then
-            echo "#### Training History" >> report.md
             echo "![](./evaluation/plots/training_history.png)" >> report.md
           fi
           
-          if [ -f evaluation/plots/confusion_matrix.png ]; then
-            echo "#### Confusion Matrix" >> report.md
-            echo "![](./evaluation/plots/confusion_matrix.png)" >> report.md
+          # 6. Append Predictions Preview (Images grid)
+          echo "### Predictions Preview" >> report.md
+          if [ -f evaluation/plots/predictions_preview.png ]; then
+            echo "![](./evaluation/plots/predictions_preview.png)" >> report.md
           fi
-          
+
+          # 7. Post the unified rich markdown report to the Pull Request
           cml comment create report.md
-    
