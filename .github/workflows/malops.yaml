@@ -13,8 +13,8 @@ permissions:
   contents: read  # Required to checkout the code
 
 jobs:
-	train-and-report:
-    		permissions: write-all
+  train-and-report:
+    permissions: write-all
   run-pipeline:
     runs-on: ubuntu-latest
     steps:
