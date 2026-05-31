@@ -40,8 +40,8 @@ jobs:
 
       - name: Pull Data from S3 via DVC
         run: |
-          dvc pull
-	- name: Setup CML
+          dvc repro --pull
+      - name: Setup CML
         if: github.event_name == 'pull_request'
         uses: iterative/setup-cml@v2
         with:
