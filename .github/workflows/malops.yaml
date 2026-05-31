@@ -43,11 +43,11 @@ jobs:
           echo "### Training History" >> report.md
           echo "![](./evaluation/plots/training_history.png)" >> report.md
 
-      - name: Publish CML Report to PR
-        env:
-          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }} # <-- Pass the built-in token
-        run: |
-          cml comment create report.md
+     # - name: Publish CML Report to PR
+      #  env:
+       #   REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }} # <-- Pass the built-in token
+        #run: |
+         # cml comment create report.md
 
       - name: Set up Python
         uses: actions/setup-python@v5
