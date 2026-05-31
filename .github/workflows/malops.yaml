@@ -2,95 +2,79 @@ name: MLOps Data Pipeline Automation
 
 on:
   push:
-    branches:
-      - main
-
-# Runs on pull requests
+    branches: [main]
   pull_request:
+    branches: [main]
 
 permissions:
-  id-token: write # Required for requesting the OIDC JWT from AWS
-  contents: read  # Required to checkout the code
+  id-token: write      # Required for secure AWS OIDC auth
+  contents: read       # Required to read repository code
+  pull-requests: write # Required so CML can comment on your PR
 
 jobs:
-  train-and-report:
-    permissions: write-all
-    #run-pipeline:
+  run-pipeline:
     runs-on: ubuntu-latest
+    # NOTICE: The 'container:' line has been removed to break down environment isolation barriers!
+    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python Environment
         uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.10'
           cache: 'pip'
 
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install "dvc[s3]"
+      - name: Setup Node.js (Required for CML)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install CML CLI Tool
+        uses: iterative/setup-cml@v2
 
       - name: Authenticate to AWS via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: us-east-1 # Change to your chosen AWS region
+          aws-region: us-west-1 # Ensure this matches your S3 bucket region
+          audience: sts.amazonaws.com
 
-      - name: Pull Data from S3 via DVC
+      - name: Install Python Dependencies and DVC
         run: |
-          dvc repro --pull
-      - name: Setup CML
-        if: github.event_name == 'pull_request'
-        uses: iterative/setup-cml@v2
-        with:
-          version: '0.20.6'
-      - name: Create CML report
-        if: github.event_name == 'pull_request'
+          python -m pip install --upgrade pip
+          pip install "pathspec==0.11.2"
+          pip install --upgrade "dvc[s3]"
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Pull Data and Run Pipeline
+        run: |
+          # Since everything runs on the host, DVC perfectly inherits the AWS credentials!
+          dvc pull
+          dvc repro
+
+      - name: Generate and Publish CML Report
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Fetch all other Git branches
-          git fetch --depth=1 origin main:main
-
-          # Add title to the report
-          echo "# Experiment Report (${{ github.sha }})" >> report.md
-
-          # Compare parameters to main branch
-          echo "## Params workflow vs. main" >> report.md
-          dvc params diff main --md >> report.md
-
-          # Compare metrics to main branch
-          echo "## Metrics workflow vs. main" >> report.md
-          dvc metrics diff main --md >> report.md
-
-          # Compare plots (images) to main branch
-          dvc plots diff main
-
-          # Create plots
-          echo "## Plots" >> report.md
-
-          # Create training history plot
-          echo "### Training History" >> report.md
-          echo "#### main" >> report.md
-          echo '![](./dvc_plots/static/main_evaluation_plots_training_history.png "Training History")' >> report.md
-          echo "#### workspace" >> report.md
-          echo '![](./dvc_plots/static/workspace_evaluation_plots_training_history.png "Training History")' >> report.md
-
-          # Create predictions preview
-          echo "### Predictions Preview" >> report.md
-          echo "#### main" >> report.md
-          echo '![](./dvc_plots/static/main_evaluation_plots_pred_preview.png "Predictions Preview")' >> report.md
-          echo "#### workspace" >> report.md
-          echo '![](./dvc_plots/static/workspace_evaluation_plots_pred_preview.png "Predictions Preview")' >> report.md
-
-          # Create confusion matrix
-          echo "### Confusion Matrix" >> report.md
-          echo "#### main" >> report.md
-          echo '![](./dvc_plots/static/main_evaluation_plots_confusion_matrix.png "Confusion Matrix")' >> report.md
-          echo "#### workspace" >> report.md
-          echo '![](./dvc_plots/static/workspace_evaluation_plots_confusion_matrix.png "Confusion Matrix")' >> report.md
-
-          # Publish the CML report
-          cml comment update --target=pr --publish report.md
+          echo "## 🚀 Experiment Performance Metrics" > report.md
+          
+          echo "### Core Model Metrics" >> report.md
+          echo "\`\`\`json" >> report.md
+          cat evaluation/metrics.json >> report.md
+          echo "\`\`\`" >> report.md
+          
+          echo "### 📊 Visual Evaluation" >> report.md
+          if [ -f evaluation/plots/training_history.png ]; then
+            echo "#### Training History" >> report.md
+            echo "![](./evaluation/plots/training_history.png)" >> report.md
+          fi
+          
+          if [ -f evaluation/plots/confusion_matrix.png ]; then
+            echo "#### Confusion Matrix" >> report.md
+            echo "![](./evaluation/plots/confusion_matrix.png)" >> report.md
+          fi
+          
+          cml comment create report.md
+    
