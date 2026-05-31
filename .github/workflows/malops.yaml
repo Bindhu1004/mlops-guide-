@@ -5,7 +5,7 @@ on:
     branches:
       - main
 
-	# Runs on pull requests
+# Runs on pull requests
   pull_request:
 
 permissions:
