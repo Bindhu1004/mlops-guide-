@@ -11,6 +11,7 @@ on:
 permissions:
   id-token: write # Required for requesting the OIDC JWT from AWS
   contents: read  # Required to checkout the code
+  pull-requests: write
 
 jobs:
   train-and-report:
@@ -20,6 +21,31 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Setup CML
+        uses: iterative/setup-cml@v2 # <-- Use stable v2 version
+      - name: Setup CML
+        uses: iterative/setup-cml@v2 # <-- Use stable v2 version
+
+      # ... Your setup-python, pip install dvc[s3], and dvc pull steps ...
+
+      - name: Run Pipeline and Generate Metrics
+        run: |
+          dvc repro
+
+          # Start creating the markdown report
+          echo "## Model Performance Report" > report.md
+          cat evaluation/metrics.json >> report.md
+
+          # Add a visualization plot image to the markdown file
+          echo "### Training History" >> report.md
+          echo "![](./evaluation/plots/training_history.png)" >> report.md
+
+      - name: Publish CML Report to PR
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }} # <-- Pass the built-in token
+        run: |
+          cml comment create report.md
 
       - name: Set up Python
         uses: actions/setup-python@v5
