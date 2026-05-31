@@ -19,7 +19,7 @@ jobs:
     #run-pipeline:
     runs-on: ubuntu-latest
 # This image has CML, DVC, Node, and canvas fully configured out of the box
-    container: docker://ghcr.io/iterative/cml:0-dvc2-base1
+    container: docker://ghcr.io/iterative/cml:0-dvc3-base1
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
